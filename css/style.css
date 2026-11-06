@@ -2269,3 +2269,20 @@ tr.dt-now td, tr.dt-now th { background: rgba(var(--accent-rgb), .1); }
   .dt-day small { font-size: .58rem; }
   .dt-big b { font-size: 1.35rem; }
 }
+
+/* メモ：タイトルだけにたためる */
+.memo .head { flex-wrap: nowrap; }
+.memo-toggle { --c: 0px; display: flex; align-items: center; justify-content: flex-start; gap: .5rem; flex: 1; min-width: 0; padding: .15rem 0; text-align: left; white-space: normal; letter-spacing: 0;
+  background: none; border: none; box-shadow: none; color: var(--text); font-weight: 500; cursor: pointer; }
+.memo-toggle:hover { filter: none; color: var(--accent); }
+.memo-toggle strong { font-size: 1.05rem; overflow-wrap: anywhere; }
+.memo-toggle .tag { flex-shrink: 0; }
+.memo-chev { display: inline-block; flex-shrink: 0; width: 1rem; text-align: center; font-size: 1.5rem; line-height: 1; color: var(--accent); transition: transform .15s; }
+.memo.open .memo-chev { transform: rotate(90deg); }
+.memo-chev.none { visibility: hidden; }
+.memo .head > .row { flex-shrink: 0; flex-wrap: nowrap; gap: .3rem; }
+@media (max-width: 760px) {
+  .memo .head { flex-wrap: wrap; }
+  .memo .head > .row { width: 100%; justify-content: flex-end; }
+  .memo .head > .row .meta { margin-right: auto; padding-left: 1.5rem; font-size: .7rem; white-space: nowrap; }
+}

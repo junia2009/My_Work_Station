@@ -326,6 +326,25 @@ await t('メモ：追加・再読み込み後も残る・絞り込み・編集�
   await page.waitForFunction(() => document.querySelectorAll('#memoList .note').length === 1);
   await page.fill('#memoSearch', '');
   await page.waitForFunction(() => document.querySelectorAll('#memoList .note').length === 2);
+  // ふだんはタイトルだけ。押すと本文が開き、もう一度押すと閉じる
+  // （直前の検索で本文に当たったメモは開いているので、いったん全部閉じる）
+  await page.click('#memoCloseAll');
+  assert.equal((await page.$$('#memoList .note pre')).length, 0);
+  await page.click('#memoList .note:nth-child(1) .memo-toggle');
+  assert.match(await page.textContent('#memoList .note:nth-child(1) pre'), /タグを打つ/);
+  assert.equal(await page.getAttribute('#memoList .note:nth-child(1) .memo-toggle', 'aria-expanded'), 'true');
+  await page.click('#memoList .note:nth-child(1) .memo-toggle');
+  assert.equal((await page.$$('#memoList .note pre')).length, 0);
+  await page.click('#memoOpenAll');
+  assert.equal((await page.$$('#memoList .note pre')).length, 2);
+  await page.click('#memoCloseAll');
+  assert.equal((await page.$$('#memoList .note pre')).length, 0);
+  // 本文にだけ当たる言葉で探すと、そのメモは開いた状態で出る
+  await page.fill('#memoSearch', 'お世話');
+  await page.waitForFunction(() => document.querySelectorAll('#memoList .note pre').length === 1);
+  await page.fill('#memoSearch', '');
+  await page.waitForFunction(() => document.querySelectorAll('#memoList .note').length === 2);
+  await page.click('#memoCloseAll');
   // 編集（同じ id のまま、先頭に来る）
   await page.click('#memoList .note:nth-child(2) button:text("編集")');
   await page.fill('#memoTitle', 'お礼メール（改）');

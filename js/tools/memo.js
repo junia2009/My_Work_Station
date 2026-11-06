@@ -13,7 +13,7 @@ export const meta = {
 
 export const help = {
   when: '作業の記録、よく使う定型文、あとで調べることなどを置いておきたいとき。',
-  steps: ['タイトル・タグ・本文を入れて保存', '一覧の「本文をコピー」で、定型文としてそのまま使えます', '別の端末に移すときは「書き出し」した JSON を「読み込み」します'],
+  steps: ['タイトル・タグ・本文を入れて保存', '一覧はタイトルだけ。タイトルを押すと本文が開きます（「すべて開く」「すべて閉じる」もあります）', '一覧の「本文をコピー」で、定型文としてそのまま使えます', '別の端末に移すときは「書き出し」した JSON を「読み込み」します'],
 };
 
 export const pallas = 'メモは未来の君への手紙だ。書いておけば、同じ調べものを二度しなくて済む。このブラウザの中にだけ保存されるから、大事なものは書き出しておこう。';
@@ -43,6 +43,8 @@ export const html = `
       <select id="memoFilter" aria-label="タグで絞り込み"></select>
     </div>
     <div class="row">
+      <button type="button" class="ghost" id="memoOpenAll">すべて開く</button>
+      <button type="button" class="ghost" id="memoCloseAll">すべて閉じる</button>
       <button type="button" class="ghost" id="memoExport">書き出し</button>
       <label class="btn ghost" for="memoImport">読み込み</label>
       <input type="file" id="memoImport" accept="application/json" hidden>
@@ -116,36 +118,72 @@ export function init() {
     $('memoTagList').replaceChildren(...tags.map((t) => h('option', { value: t })));
   }
 
+  // 本文を開いているメモ（ふだんはタイトルだけ。ページを開き直すと閉じた状態に戻る）
+  const opened = new Set();
+  let shown = [];
+  let lastQ = '';
+
   function render() {
     const all = load();
     renderTags(all);
     const tag = $('memoFilter').value;
     const q = $('memoSearch').value.trim().toLowerCase();
     const list = all.filter((n) => (!tag || n.tag === tag) && (!q || `${n.title}\n${n.tag}\n${n.body}`.toLowerCase().includes(q)));
+    shown = list;
+    // キーワードが変わったら、本文にだけ当たったメモを開く（どこに当たったか分かるように）
+    if (q !== lastQ) {
+      lastQ = q;
+      if (q) for (const n of list) if (n.body?.toLowerCase().includes(q) && !`${n.title}\n${n.tag}`.toLowerCase().includes(q)) opened.add(n.id);
+    }
     $('memoList').replaceChildren(
-      ...(list.length ? list.map((n) =>
-        h('div', { class: 'note' },
+      ...(list.length ? list.map((n) => {
+        const open = !!n.body && opened.has(n.id);
+        const bodyId = `memo-body-${n.id}`;
+        const toggle = () => {
+          if (!n.body) return;
+          if (opened.has(n.id)) opened.delete(n.id);
+          else opened.add(n.id);
+          render();
+          document.querySelector(`[aria-controls="${bodyId}"]`)?.focus();
+        };
+        return h('div', { class: `note memo${open ? ' open' : ''}` },
           h('div', { class: 'head' },
-            h('div', {}, n.tag ? h('span', { class: 'tag' }, n.tag) : '', h('strong', {}, n.title)),
+            h('button', {
+              type: 'button', class: 'memo-toggle', 'aria-expanded': n.body ? String(open) : null, 'aria-controls': n.body ? bodyId : null,
+              title: n.body ? (open ? '本文を閉じる' : '本文を開く') : '本文はありません', onclick: toggle,
+            },
+            h('span', { class: `memo-chev${n.body ? '' : ' none'}`, 'aria-hidden': 'true' }, '›'),
+            n.tag ? h('span', { class: 'tag' }, n.tag) : '',
+            h('strong', {}, n.title)),
             h('div', { class: 'row' },
               h('span', { class: 'meta' }, fmtDate(n.updated)),
-              n.body ? h('button', { type: 'button', class: 'ghost', onclick: () => copy(n.body) }, '本文をコピー') : '',
-              h('button', { type: 'button', class: 'ghost', onclick: () => edit(n) }, '編集'),
+              n.body ? h('button', { type: 'button', class: 'ghost small', onclick: () => copy(n.body) }, '本文をコピー') : '',
+              h('button', { type: 'button', class: 'ghost small', onclick: () => edit(n) }, '編集'),
               h('button', {
-                type: 'button', class: 'ghost',
+                type: 'button', class: 'ghost small',
                 onclick: () => {
                   if (!confirm(`「${n.title}」を削除しますか？`)) return;
+                  opened.delete(n.id);
                   save(load().filter((x) => x.id !== n.id));
                   render();
                 },
               }, '削除'),
             ),
           ),
-          n.body ? h('pre', {}, n.body) : '',
-        ),
-      ) : [h('p', { class: 'hint' }, all.length ? '条件に合うメモがありません。' : 'まだメモがありません。')]),
+          open ? h('pre', { id: bodyId }, n.body) : '',
+        );
+      }) : [h('p', { class: 'hint' }, all.length ? '条件に合うメモがありません。' : 'まだメモがありません。')]),
     );
   }
+
+  $('memoOpenAll').addEventListener('click', () => {
+    shown.forEach((n) => n.body && opened.add(n.id));
+    render();
+  });
+  $('memoCloseAll').addEventListener('click', () => {
+    opened.clear();
+    render();
+  });
 
   $('memoFilter').addEventListener('change', render);
   $('memoSearch').addEventListener('input', debounce(render));
