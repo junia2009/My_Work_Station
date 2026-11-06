@@ -361,6 +361,80 @@ await t('メモ：追加・再読み込み後も残る・絞り込み・編集�
   await ctx.close();
 });
 
+await t('メモの写真：追加・貼り付け・表示・再読み込み後も残る・書き出しと読み込み・削除', async () => {
+  const { page, ctx } = await open('memo');
+  const photoCount = () => page.evaluate(() => new Promise((ok) => {
+    const r = indexedDB.open('workstation');
+    r.onsuccess = () => { const q = r.result.transaction('photos').objectStore('photos').count(); q.onsuccess = () => ok(q.result); };
+  }));
+  // ファイルを選んで追加
+  await page.setInputFiles('#memoPhotoIn', join(ROOT, 'icons/icon-512.png'));
+  await page.waitForSelector('#memoDraftPhotos .memo-thumb img');
+  // 貼り付け（スクリーンショットを Ctrl+V したとき）
+  await page.evaluate(async () => {
+    const c = Object.assign(document.createElement('canvas'), { width: 300, height: 200 });
+    c.getContext('2d').fillRect(0, 0, 300, 200);
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], 'shot.png', { type: 'image/png' }));
+    document.getElementById('memoBody').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  await page.waitForFunction(() => document.querySelectorAll('#memoDraftPhotos .memo-thumb img').length === 2);
+  // 1 枚外してから保存
+  await page.click('#memoDraftPhotos .memo-thumb:nth-child(2) .memo-thumb-x');
+  await page.fill('#memoTitle', '画面のスクショ');
+  await page.click('#memoForm button[type="submit"]');
+  await page.waitForSelector('#memoList .memo-count');
+  assert.match(await page.textContent('#memoList .memo-count'), /写真 1/);
+  assert.equal((await page.$$('#memoDraftPhotos .memo-thumb')).length, 0);
+  // 写真だけのメモも開ける。押すと大きく見られる
+  await page.click('#memoList .memo-toggle');
+  await page.waitForSelector('#memoList .memo-body .memo-thumb img');
+  await page.click('#memoList .memo-body .memo-thumb-btn');
+  await page.waitForFunction(() => document.getElementById('memoViewer').open && document.getElementById('memoViewerImg').naturalWidth === 512);
+  assert.match(await page.textContent('#memoViewerInfo'), /512×512/);
+  await page.click('#memoViewerClose');
+  // 再読み込み後も残る
+  await page.reload();
+  await waitPage(page, 'memo');
+  await page.click('#memoList .memo-toggle');
+  await page.waitForSelector('#memoList .memo-body .memo-thumb img');
+  // 書き出し（写真は JSON の中に入る）→ 削除 → 読み込みで元に戻る
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#memoExport')]);
+  const file = await dl.path();
+  const json = JSON.parse(await readFile(file, 'utf8'));
+  assert.match(json[0].photos[0].data, /^data:image\/png;base64,/);
+  page.once('dialog', (d) => d.accept());
+  await page.click('#memoList .note button:text("削除")');
+  await page.waitForFunction(() => !document.querySelector('#memoList .note'));
+  await page.waitForTimeout(200);
+  assert.equal(await photoCount(), 1); // 外した 1 枚は片付けの対象（作ったばかりなので、まだ残る）
+  await page.setInputFiles('#memoImport', file);
+  await page.waitForSelector('#memoList .memo-count');
+  await page.click('#memoList .memo-toggle');
+  await page.waitForSelector('#memoList .memo-body .memo-thumb img');
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
+
+await t('写真の縮小：大きい写真は長辺 1600px の JPEG にする', async () => {
+  const { page, ctx } = await open();
+  const r = await page.evaluate(async () => {
+    const { shrinkImage } = await import('./js/ui/image.js');
+    const c = Object.assign(document.createElement('canvas'), { width: 3000, height: 2000 });
+    const g = c.getContext('2d');
+    // 写真のように細かい模様（PNG では小さくならない）
+    const img = g.createImageData(3000, 2000);
+    for (let i = 0; i < img.data.length; i++) img.data[i] = (i & 3) === 3 ? 255 : (i * 2654435761) >>> 24;
+    g.putImageData(img, 0, 0);
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+    const out = await shrinkImage(new File([blob], 'big.png', { type: 'image/png' }));
+    return { w: out.w, h: out.h, type: out.blob.type, name: out.name, smaller: out.blob.size < blob.size };
+  });
+  assert.deepEqual(r, { w: 1600, h: 1067, type: 'image/jpeg', name: 'big.jpg', smaller: true });
+  await ctx.close();
+});
+
 await t('ひな形（_template.js）はそのまま登録すれば動く', async () => {
   const { page, ctx } = await open();
   const r = await page.evaluate(async () => {
