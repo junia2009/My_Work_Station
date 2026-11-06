@@ -53,7 +53,7 @@ export function initPallas() {
     ),
   );
   bubble.addEventListener('pointerenter', () => clearTimeout(closeTimer));
-  const stage = h('div', { class: 'pd-stage' }, h('img', { class: 'pd-fallback', src: 'icons/icon.svg', alt: '' }));
+  const stage = h('div', { class: 'pd-stage' }, h('img', { class: 'pd-fallback', src: 'icons/pallas.png', alt: '' }));
   const droneBtn = h('button', { type: 'button', class: 'pallas-drone', 'aria-label': '案内役 PALLAS と話す（ドラッグで移動）' }, stage);
   const mini = h('button', { type: 'button', class: 'pallas-mini', hidden: '', onclick: () => setHidden(false) }, h('span', { class: 'dot' }), 'PALLAS');
   const layer = h('div', { class: 'pallas', id: 'pallas' }, bubble, droneBtn, mini);
