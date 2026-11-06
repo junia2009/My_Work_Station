@@ -8,6 +8,7 @@ import { parseMarkdown, parseInline, inlineText, safeUrl, blocksText, titleOf } 
 import { searchItems, normalize, snippet } from '../js/lib/search.js';
 import { hexToBytes, bytesToHex, latin1Decode } from '../js/lib/bytes.js';
 import { TEXTS } from '../texts/index.js';
+import * as D from '../js/lib/dates.js';
 
 let passed = 0;
 const t = async (name, fn) => {
@@ -93,6 +94,87 @@ await t('検索：表記ゆれをそろえて、重みで並べる', () => {
   assert.match(searchItems('F9', items)[0].snippet, /F9/);
   assert.deepEqual(searchItems('  ', items), []);
   assert.equal(snippet('abc', 'z'), '');
+});
+
+// ---------- 日付 ----------
+const dd = (s) => D.parseDate(s);
+await t('日付：祝日（振替休日・国民の休日・特例の年）', () => {
+  const list = (y) => [...D.holidays(y)].map(([k, v]) => `${k.slice(5)}${v}`);
+  assert.deepEqual(list(2026), ['01-01元日', '01-12成人の日', '02-11建国記念の日', '02-23天皇誕生日', '03-20春分の日', '04-29昭和の日', '05-03憲法記念日', '05-04みどりの日', '05-05こどもの日', '05-06振替休日', '07-20海の日', '08-11山の日', '09-21敬老の日', '09-22国民の休日', '09-23秋分の日', '10-12スポーツの日', '11-03文化の日', '11-23勤労感謝の日']);
+  assert.equal(D.holidays(2019).get('2019-05-01'), '天皇の即位の日');
+  assert.equal(D.holidays(2019).get('2019-04-30'), '国民の休日');
+  assert.equal(D.holidays(2019).get('2019-10-22'), '即位礼正殿の儀');
+  assert.equal(D.holidays(2020).get('2020-07-24'), 'スポーツの日');
+  assert.equal(D.holidays(2021).get('2021-08-09'), '振替休日');
+  assert.equal(D.holidays(2027).get('2027-03-22'), '振替休日');
+  assert.equal(D.holidays(2018).get('2018-12-24'), '振替休日');
+  assert.equal(D.holidays(2019).has('2019-12-23'), false); // 2019 年は天皇誕生日がない
+  assert.equal(D.holidays(2026).size, 18);
+});
+await t('日付：営業日（数える・足す・休みの設定）', () => {
+  const r = D.DEFAULT_RULE;
+  assert.equal(D.countBusinessDays(dd('2026-11-01'), dd('2026-11-30'), r), 19);
+  assert.equal(D.fmt(D.addBusinessDays(dd('2026-04-28'), 3, r)), '2026-05-07');
+  assert.equal(D.fmt(D.addBusinessDays(dd('2026-05-07'), -3, r)), '2026-04-28');
+  assert.equal(D.fmt(D.addBusinessDays(dd('2026-05-03'), 0, r)), '2026-05-07');
+  const ny = { ...r, newYear: true, extra: ['2027-01-04'] };
+  assert.equal(D.fmt(D.addBusinessDays(dd('2026-12-28'), 1, ny)), '2027-01-05');
+  assert.equal(D.offReason(dd('2027-01-02'), ny), '年末年始');
+  assert.equal(D.offReason(dd('2027-01-04'), ny), '会社の休み');
+  assert.equal(D.offReason(dd('2026-11-03'), r), '祝日：文化の日');
+  assert.equal(D.offReason(dd('2026-11-07'), r), '土曜');
+  assert.equal(D.offReason(dd('2026-11-06'), r), null);
+  assert.equal(D.countBusinessDays(dd('2026-11-07'), dd('2026-11-08'), { weekend: [], holiday: false }), 2);
+  assert.throws(() => D.addBusinessDays(dd('2026-01-01'), 1, { weekend: [0, 1, 2, 3, 4, 5, 6] }));
+});
+await t('日付：読み取り・月の足し算・期間', () => {
+  assert.equal(D.fmt(dd('2026/1/5')), '2026-01-05');
+  assert.equal(D.fmt(dd('2026年1月5日')), '2026-01-05');
+  assert.equal(dd('2026-02-30'), null);
+  assert.equal(D.fmt(D.addMonths(dd('2024-01-31'), 1)), '2024-02-29');
+  assert.equal(D.fmt(D.addMonths(dd('2025-01-31'), 1)), '2025-02-28');
+  assert.equal(D.fmt(D.addMonths(dd('2026-03-31'), -1)), '2026-02-28');
+  assert.equal(D.fmt(D.addYears(dd('2024-02-29'), 1)), '2025-02-28');
+  const x = D.diffYMD(dd('2024-01-31'), dd('2026-03-01'));
+  assert.deepEqual([x.years, x.months, x.days, x.totalMonths], [2, 1, 1, 25]);
+  assert.equal(D.age(dd('1990-11-07'), dd('2026-11-06')), 35);
+  assert.equal(D.age(dd('1990-11-06'), dd('2026-11-06')), 36);
+  // 2/29 生まれは、うるう年でない年は 2/28 に 1 つ増える（月末にそろえる）
+  assert.equal(D.age(dd('2000-02-29'), dd('2026-02-27')), 25);
+  assert.equal(D.age(dd('2000-02-29'), dd('2026-02-28')), 26);
+  assert.equal(D.daysBetween(dd('2026-03-28'), dd('2026-03-30')), 2); // 夏時間の時期でもずれない
+});
+await t('日付：和暦', () => {
+  assert.equal(D.toWareki(dd('2019-04-30')).text, '平成31年4月30日');
+  assert.equal(D.toWareki(dd('2019-05-01')).text, '令和元年5月1日');
+  assert.equal(D.toWareki(dd('1989-01-07')).text, '昭和64年1月7日');
+  assert.equal(D.toWareki(dd('1989-01-08')).text, '平成元年1月8日');
+  assert.equal(D.toWareki(dd('1926-12-25')).text, '昭和元年12月25日');
+  assert.equal(D.toWareki(dd('1872-12-31')), null);
+  assert.equal(D.fmt(D.fromWareki('令和', 8, 11, 6).t), '2026-11-06');
+  assert.equal(D.fmt(D.fromWareki('H', 31, 4, 30).t), '2019-04-30');
+  assert.match(D.fromWareki('平成', 31, 5, 1).error, /令和元年5月1日/);
+  assert.deepEqual(D.parseWareki('R8.11.6'), { era: 'R', year: 8, month: 11, day: 6 });
+  assert.deepEqual(D.parseWareki('平成元年'), { era: '平成', year: 1, month: null, day: null });
+  assert.deepEqual(D.parseWareki('令和８年１１月６日'), { era: '令和', year: 8, month: 11, day: 6 });
+  assert.deepEqual(D.warekiOfYear(1989), ['昭和64年', '平成元年']);
+  assert.deepEqual(D.warekiOfYear(2026), ['令和8年']);
+  assert.deepEqual(D.eto(2026), { kanshi: '丙午', animal: 'うま' });
+  assert.deepEqual(D.eto(1984), { kanshi: '甲子', animal: 'ねずみ' });
+});
+await t('日付：タイムゾーンと UNIX 時間', () => {
+  const ms = D.fromZoned({ y: 2026, mo: 11, d: 6, h: 9, mi: 0 }, 'Asia/Tokyo');
+  assert.equal(new Date(ms).toISOString(), '2026-11-06T00:00:00.000Z');
+  const ny = D.zoned(ms, 'America/New_York');
+  assert.deepEqual([ny.d, ny.h, ny.offset], [5, 19, -300]);
+  // 夏時間：存在しない 2:30 は 3:30（EDT）になる
+  assert.equal(new Date(D.fromZoned({ y: 2026, mo: 3, d: 8, h: 2, mi: 30 }, 'America/New_York')).toISOString(), '2026-03-08T07:30:00.000Z');
+  assert.equal(D.zoned(Date.UTC(2026, 6, 1), 'Europe/London').offset, 60);
+  assert.equal(D.offsetText(330), 'UTC+05:30');
+  assert.equal(D.offsetText(-300), 'UTC−05:00');
+  assert.equal(D.fromUnix('1700000000'), 1700000000000);
+  assert.equal(D.fromUnix('1700000000123'), 1700000000123);
+  assert.equal(D.fromUnix('abc'), null);
 });
 
 // ---------- 登録内容 ----------

@@ -91,7 +91,7 @@ await t('ホームがエラーなしで表示され、ツールとテキスト�
 await t('メニューはツールの一覧から作られ、全項目が開ける（MODULE 番号つき）', async () => {
   const { page, ctx } = await open();
   const routes = await page.$$eval('#nav a[data-route]:not(.nav-pinned):not(.nav-fav)', (as) => as.map((a) => a.dataset.route));
-  assert.deepEqual(routes, ['home', 'texts', 'learn', 'dict', 'diff', 'regex', 'memo']);
+  assert.deepEqual(routes, ['home', 'texts', 'learn', 'dict', 'date', 'diff', 'regex', 'memo']);
   for (const r of routes) {
     await page.click(`#nav a[data-route="${r}"]:not(.nav-pinned)`);
     await waitPage(page, r, 5000).catch(() => { throw new Error(`${r} が表示されない`); });
@@ -235,6 +235,7 @@ await t('どのツールも「▶ 例を試す」で結果が出る', async () =
   const { page, ctx } = await open();
   const checks = {
     diff: () => /追加 \d+・削除 \d+/.test(document.getElementById('dfInfo').textContent),
+    date: () => /営業日（両端を含む）/.test(document.getElementById('dtSpanOut').textContent) && /年末年始/.test(document.getElementById('dtSpanOut').textContent),
     regex: () => /^3 件マッチ/.test(document.getElementById('rxInfo').textContent) && /yamada\.taro さん/.test(document.getElementById('rxRepOut').textContent),
   };
   for (const [id, ok] of Object.entries(checks)) {
@@ -254,6 +255,52 @@ await t('差分比較：Excel ファイルどうしをセル単位で比べ、�
   await page.waitForFunction(() => /変更のあるセル 5 個/.test(document.getElementById('dfInfo').textContent));
   assert.equal(await page.inputValue('#dfMode'), 'sheet');
   assert.match(await page.textContent('#dfOut'), /secret/);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
+
+await t('日付計算：営業日・〇営業日後・カレンダー・和暦・時差・会社の休み', async () => {
+  const { page, ctx } = await open('date');
+  const text = (id) => page.textContent('#' + id);
+  // 期間・営業日（2026 年 11 月：営業日 19 日、祝日 2 日）
+  await page.fill('#dtFrom', '2026-11-01');
+  await page.fill('#dtTo', '2026-11-30');
+  await page.waitForFunction(() => /営業日（両端を含む）19 日/.test(document.getElementById('dtSpanOut').textContent));
+  assert.match(await text('dtSpanOut'), /29 日/);
+  assert.match(await text('dtSpanOut'), /文化の日/);
+  // 日付を足す（ゴールデンウィークをまたぐ）
+  await page.click('[data-tab="dt-add"]');
+  await page.fill('#dtBase', '2026-04-28');
+  await page.fill('#dtN', '3');
+  await page.selectOption('#dtUnit', 'bday');
+  await page.waitForFunction(() => /2026\/05\/07（木）/.test(document.getElementById('dtAddOut').textContent));
+  // 会社の休みを足すと、結果が 1 日ずれ、再読み込み後も残る
+  await page.click('#dtRule summary');
+  await page.fill('#dtExtra', '2026-05-07 創立記念日');
+  await page.waitForFunction(() => /2026\/05\/08（金）/.test(document.getElementById('dtAddOut').textContent));
+  await page.reload();
+  await waitPage(page, 'date');
+  assert.equal(await page.inputValue('#dtExtra'), '2026-05-07 創立記念日');
+  // カレンダー（2026 年 9 月のシルバーウィーク）
+  await page.click('[data-tab="dt-cal"]');
+  await page.fill('#dtCalMonth', '2026-09');
+  await page.dispatchEvent('#dtCalMonth', 'change');
+  await page.waitForFunction(() => /国民の休日/.test(document.getElementById('dtCal').textContent));
+  assert.equal(await page.$$eval('#dtCal .dt-day.hol', (a) => a.length), 3);
+  // 和暦
+  await page.click('[data-tab="dt-wareki"]');
+  await page.fill('#dtWa', 'H31.4.30');
+  await page.waitForFunction(() => /2019\/04\/30/.test(document.getElementById('dtWaOut').textContent));
+  await page.fill('#dtWa', '平成32年');
+  await page.waitForFunction(() => /ありません/.test(document.getElementById('dtWaOut').textContent));
+  assert.ok((await page.$$('#dtYears tr')).length > 90);
+  // 時差
+  await page.click('[data-tab="dt-tz"]');
+  await page.fill('#dtTzTime', '2026-11-06T09:00');
+  await page.selectOption('#dtTzFrom', 'Asia/Tokyo');
+  await page.waitForFunction(() => /2026\/11\/05（木）19:00/.test(document.getElementById('dtTzOut').textContent));
+  await page.fill('#dtUnix', '1700000000');
+  await page.waitForFunction(() => /2023\/11\/15（水）07:13:20/.test(document.getElementById('dtUnixOut').textContent));
   assert.deepEqual(page.errors, []);
   await ctx.close();
 });
@@ -374,7 +421,7 @@ await t('PALLAS：タップでメニューが出て、ツアーを最後まで�
 // ---------- スマホ ----------
 await t('スマホ：横にはみ出さず、メニューからページを開ける', async () => {
   const { page, ctx } = await open('', { device: 'iPhone 13' });
-  for (const id of ['home', 'texts', 'learn', 'dict', 'diff', 'regex', 'memo']) {
+  for (const id of ['home', 'texts', 'learn', 'dict', 'date', 'diff', 'regex', 'memo']) {
     await page.goto(BASE + '#' + id);
     await waitPage(page, id);
     await page.waitForTimeout(150);

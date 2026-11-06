@@ -2234,3 +2234,38 @@ kbd { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; d
 .md-check { display: inline-grid; place-items: center; flex-shrink: 0; width: 1.05rem; height: 1.05rem; border: 1px solid var(--line-strong); font-size: .75rem; color: var(--accent); transform: translateY(.15rem); }
 .md-task li.done > span:last-child { color: var(--muted); }
 .mn-p a, .mn-list a, .mn-table a, .mn-callout a { overflow-wrap: anywhere; }
+
+/* 日付計算 */
+.dt-rule summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .8rem; cursor: pointer; }
+.dt-rule-row { margin: .8rem 0 .4rem; gap: .4rem 1.2rem; }
+.form-grid.dt-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-grid.dt-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dt-big { display: flex; flex-direction: column; gap: .25rem; padding: .9rem 1.1rem; margin-bottom: .8rem; border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); background: rgba(var(--accent-rgb), .07); cursor: copy; }
+.dt-big b { font-family: var(--mono); font-size: 1.7rem; color: var(--accent); letter-spacing: .03em; text-shadow: var(--glow); }
+.dt-big span { color: var(--muted); font-size: .9rem; }
+.dt-big .dt-big-label { color: var(--text); font-size: .85rem; }
+.dt-cal-title { font-size: 1.05rem; min-width: 12rem; text-align: center; }
+.dt-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin: .8rem 0 .4rem; }
+.dt-dow { text-align: center; font-size: .78rem; font-weight: 700; color: var(--muted); padding: .2rem 0; }
+.dt-dow.sun, .dt-day.sun b { color: #ff6b81; }
+.dt-dow.sat, .dt-day.sat b { color: #5fa8ff; }
+.dt-day { --c: 0px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: .1rem; min-height: 3.6rem; padding: .3rem .4rem; text-align: left; white-space: normal; letter-spacing: 0;
+  background: var(--glass-2); color: var(--text); border: 1px solid var(--line); font-weight: 500; cursor: copy; }
+.dt-day:hover { filter: none; border-color: var(--accent); }
+.dt-day.empty { visibility: hidden; }
+.dt-day b { font-family: var(--mono); font-size: .95rem; }
+.dt-day small { font-size: .66rem; line-height: 1.25; color: var(--muted); overflow-wrap: anywhere; }
+.dt-day.off { background: rgba(255, 107, 129, .07); }
+.dt-day.hol b, .dt-day.hol small { color: #ff6b81; }
+.dt-day.today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent), 0 0 12px rgba(var(--accent-rgb), .3); }
+.dt-offs { display: grid; gap: .2rem; margin: .4rem 0 0; padding-left: 1.1rem; font-size: .9rem; }
+.dt-offs b { margin-right: .6rem; }
+tr.dt-now td, tr.dt-now th { background: rgba(var(--accent-rgb), .1); }
+[data-mode="light"] .dt-dow.sun, [data-mode="light"] .dt-day.sun b, [data-mode="light"] .dt-day.hol b, [data-mode="light"] .dt-day.hol small { color: #d63352; }
+[data-mode="light"] .dt-dow.sat, [data-mode="light"] .dt-day.sat b { color: #1f6fd1; }
+@media (max-width: 760px) {
+  .form-grid.dt-two, .form-grid.dt-three { grid-template-columns: minmax(0, 1fr); }
+  .dt-day { min-height: 3rem; padding: .2rem .25rem; }
+  .dt-day small { font-size: .58rem; }
+  .dt-big b { font-size: 1.35rem; }
+}
