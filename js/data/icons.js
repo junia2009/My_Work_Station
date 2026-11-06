@@ -1,0 +1,79 @@
+// 線画アイコン（ホームのタイル・サイドメニュー・お気に入りで共通に使う）
+// 24×24 の線画（stroke で描く）。すべてこのポータル用のオリジナル
+// 新しいツールでは、ここにある名前を meta.icon に書くか、SVG の path（'M…'）を直接書く
+
+export const ICONS = {
+  home: 'M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5',
+  guide: 'M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5C4.7 20 4 19.3 4 18.5zM20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5zM6.5 8h2M6.5 11h2M15.5 8h2M15.5 11h2',
+  identify: 'M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 12l7-7M17 3h4v4',
+  codec: 'M4 8h13l-3-3M20 16H7l3 3M8 3v3M16 18v3',
+  base: 'M4 7h4v10H4zM11 7l2 5-2 5M16 7h4M16 12h4M16 17h4',
+  classic: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18M12 7a5 5 0 1 0 0 10 5 5 0 1 0 0-10M12 3v4M12 17v4M3 12h4M17 12h4',
+  xor: 'M12 4a8 8 0 1 0 0 16 8 8 0 1 0 0-16M12 4v16M4 12h16',
+  rsa: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5zM12 15v2',
+  file: 'M6 3h8l5 5v13H6zM14 3v5h5M9 13h7M9 17h5',
+  hash: 'M9 4L7 20M17 4l-2 16M4 9h17M3 15h17',
+  jwt: 'M4 7h16v10H4zM8 11h.01M12 11h.01M16 11h.01M8 14h8',
+  flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
+  net: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  notes: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5',
+  cheatsheet: 'M4 5h16v14H4zM7 10l3 2-3 2M12 15h5',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M15.5 9h.01',
+  audio: 'M4 10v4M7.5 7v10M11 4v16M14.5 8v8M18 6v12M21 11v2',
+  pcap: 'M4 7h10M4 12h16M4 17h7M17 5l3 2-3 2M14 15l-3 2 3 2',
+  logs: 'M4 20h16M6 17v-4M10 17V7M14 17v-7M18 17V4',
+  math: 'M5 6h6M8 3v6M14 6h5M5 15l4 4M9 15l-4 4M14 15h5M14 19h5',
+  binview: 'M5 4h5v7H5zM14 4h5v7h-5zM5 14h5v6H5zM14 14h5v6h-5zM7.5 7v1M16.5 16v1',
+  mojibake: 'M4 6h7M7.5 6v12M4 18h7M14 8l6 8M20 8l-6 8',
+  diff: 'M8 4v16M16 4v16M4.5 9h7M12.5 15h7M16 12v6M13 15h6',
+  regex: 'M17 3v8M13.5 5l7 4M20.5 5l-7 4M5 19h.01M4 21h3v-3H4z',
+  pinject: 'M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6zM9 12l2 2 4-4',
+  rev: 'M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16',
+  proxy: 'M3 12h4M17 12h4M7 7h10v10H7zM5 9.5L3 12l2 2.5M19 9.5l2 2.5-2 2.5M10 10.5h4M10 13.5h4',
+  devtools: 'M3 5h18v14H3zM3 9h18M9 13l-2 2 2 2M15 13l2 2-2 2M12.5 12.5l-1 5',
+  dict: 'M4 5.5C4 4.7 4.7 4 5.5 4H19v14H6a2 2 0 0 0 0 4h13M8 8h7M8 11h5M12.5 14.5l1.5 1.5 3-3',
+  learn: 'M2 8l10-4 10 4-10 4zM6 10v5c2 2 10 2 12 0v-5M22 8v6',
+  api: 'M4 6h16v12H4zM7 10l2 2-2 2M11 14h4M15 3v3M9 3v3',
+  server: 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01M12 7h5M12 17h5',
+  container: 'M3 8l9-4 9 4v8l-9 4-9-4zM3 8l9 4 9-4M12 12v8',
+  cloud: 'M7 18a4 4 0 0 1-.5-7.97 5.5 5.5 0 0 1 10.6-1.1A4 4 0 0 1 17 18z',
+  bars: 'M4 20V10M10 20V4M16 20v-8M22 20v-5M3 20h20',
+  nginx: 'M4 20V4l16 16V4',
+  webform: 'M4 5h16v14H4zM7 9h10M7 13h6M15 16h3v-3l-.5-.5',
+  jsdeobf: 'M8 4H6a2 2 0 0 0-2 2v4l-2 2 2 2v4a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v4l2 2-2 2v4a2 2 0 0 1-2 2h-2M10 12h.01M14 12h.01',
+  jsrun: 'M4 4h16v16H4zM8 9l3 3-3 3M13 15h4',
+  python: 'M8 4h5a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H8a3 3 0 0 0-3 3v2M9 7h.01M16 20h-5a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3h5a3 3 0 0 0 3-3V5M15 17h.01',
+  esolang: 'M4 6h3M4 12h6M4 18h2M14 6l6 6-6 6',
+  shield: 'M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6zM9 12l2 2 4-4',
+  manuals: 'M5 4h10l4 4v12H5zM15 4v4h4M8 11h8M8 14.5h8M8 18h5',
+  geo: 'M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12zM12 6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5',
+  favorites: 'M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z',
+  arrow: 'M5 12h14M13 6l6 6-6 6',
+  upload: 'M12 16V4M7 9l5-5 5 5M4 16v4h16v-4',
+  // ---- 作業台で追加したもの ----
+  texts: 'M5 4h10l4 4v12H5zM15 4v4h4M8 11h8M8 14.5h8M8 18h5',
+  memo: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5',
+  search: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13M15.5 15.5L20 20',
+  calc: 'M6 3h12v18H6zM9 6.5h6M9 11h.01M12 11h.01M15 11h.01M9 14.5h.01M12 14.5h.01M15 14.5h.01M9 18h.01M12 18h3',
+  calendar: 'M4 6h16v14H4zM4 10h16M8 3v5M16 3v5M8 14h2M14 14h2M8 17h2',
+  clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18M12 7v5l3 2',
+  table: 'M4 5h16v14H4zM4 10h16M4 15h16M10 5v14',
+  text: 'M5 6V4h14v2M12 4v16M9 20h6',
+  list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+  check: 'M4 5h16v14H4zM8 12l3 3 5-6',
+  mail: 'M3 6h18v12H3zM3 6l9 7 9-7',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+  wrench: 'M14.5 4.5a4.5 4.5 0 0 0-5.9 5.9L4 15v5h5l4.6-4.6a4.5 4.5 0 0 0 5.9-5.9l-2.8 2.8-2.8-.7-.7-2.8z',
+};
+
+export function icon(name, cls = 'ico') {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('class', cls);
+  svg.setAttribute('aria-hidden', 'true');
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('d', ICONS[name] ?? (/^M/.test(name ?? '') ? name : ICONS.arrow));
+  svg.append(p);
+  return svg;
+}
