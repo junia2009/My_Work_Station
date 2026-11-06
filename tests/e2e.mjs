@@ -394,8 +394,8 @@ await t('メモの写真：本文の好きな位置に入れる（追加・貼�
   assert.equal(await page.$$eval('#memoBody b', (a) => a.length), 0);
   await page.fill('#memoTitle', 'サーバー室の配線');
   await page.click('#memoForm button[type="submit"]');
-  await page.waitForSelector('#memoList .memo-count');
-  assert.match(await page.textContent('#memoList .memo-count'), /写真 2/);
+  await page.waitForSelector('#memoList .note');
+  assert.equal(await page.$$eval('#memoList .memo-count', (a) => a.length), 0); // タイトルの横に写真の印は出さない
   // 保存された形：文字と写真の印が書いた順に並ぶ
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('workstation.memos'))[0].body);
   assert.match(saved, /^ラックの写真\n\{\{photo:ph_[\w-]+\}\}\n青が本番\n\{\{photo:ph_[\w-]+\}\}\n黄が検証（追記）$/);
@@ -416,7 +416,7 @@ await t('メモの写真：本文の好きな位置に入れる（追加・貼�
   await page.waitForFunction(() => document.querySelectorAll('#memoBody img[data-photo]').length === 2);
   await page.evaluate(() => document.querySelectorAll('#memoBody img[data-photo]')[1].remove());
   await page.click('#memoForm button[type="submit"]');
-  await page.waitForFunction(() => /写真 1/.test(document.querySelector('#memoList .memo-count')?.textContent));
+  await page.waitForFunction(() => !document.getElementById('memoBody').querySelector('img'));
   // 消した写真は保存場所からも消える
   for (let i = 0; i < 20 && (await photoCount()) !== 1; i++) await page.waitForTimeout(100);
   assert.equal(await photoCount(), 1);
@@ -438,7 +438,7 @@ await t('メモの写真：本文の好きな位置に入れる（追加・貼�
     r.onsuccess = () => { const q = r.result.transaction('photos').objectStore('photos').count(); q.onsuccess = () => ok(q.result === 0); };
   }));
   await page.setInputFiles('#memoImport', file);
-  await page.waitForSelector('#memoList .memo-count');
+  await page.waitForSelector('#memoList .note');
   await page.click('#memoList .memo-toggle');
   await page.waitForSelector('#memoList .memo-body .memo-inline img');
   assert.match(await page.textContent('#memoList .memo-body'), /ラックの写真[\s\S]*青が本番/);
@@ -459,7 +459,6 @@ await t('メモの写真：前の形式（写真を本文の外に持つメモ�
   await waitPage(page, 'memo');
   await page.click('#memoList .memo-toggle');
   await page.waitForSelector('#memoList .memo-body .memo-inline img');
-  assert.match(await page.textContent('#memoList .memo-count'), /写真 1/);
   assert.deepEqual(page.errors, []);
   await ctx.close();
 });
