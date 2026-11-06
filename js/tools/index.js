@@ -7,12 +7,14 @@
 //   （詳しくは「テキスト」の「ツール・テキストの追加方法」を参照）
 
 import * as texts from './texts.js';
+import * as learn from './learn.js';
+import * as dict from './dict.js';
 import * as diff from './diff.js';
 import * as regex from './regex.js';
 import * as memo from './memo.js';
 import { ICONS } from '../data/icons.js';
 
-export const MODULES = [texts, diff, regex, memo];
+export const MODULES = [texts, learn, dict, diff, regex, memo];
 
 // ---- ここから下は自動で組み立てる（ふだんは触らなくて大丈夫） ----
 

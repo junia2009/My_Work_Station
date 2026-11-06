@@ -43,7 +43,7 @@ export const TEXTS = [
 ```js js/tools/index.js
 import * as count from './count.js';   // ← 足す
 
-export const MODULES = [texts, diff, regex, memo, count];   // ← 並べたい位置に足す
+export const MODULES = [texts, learn, dict, diff, regex, memo, count];   // ← 並べたい位置に足す
 ```
 
 ひな形には「文字数カウント」が例として書いてあります。そのまま登録すると動くので、まずは試してみてください。

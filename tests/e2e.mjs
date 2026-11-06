@@ -91,7 +91,7 @@ await t('ホームがエラーなしで表示され、ツールとテキスト�
 await t('メニューはツールの一覧から作られ、全項目が開ける（MODULE 番号つき）', async () => {
   const { page, ctx } = await open();
   const routes = await page.$$eval('#nav a[data-route]:not(.nav-pinned):not(.nav-fav)', (as) => as.map((a) => a.dataset.route));
-  assert.deepEqual(routes, ['home', 'texts', 'diff', 'regex', 'memo']);
+  assert.deepEqual(routes, ['home', 'texts', 'learn', 'dict', 'diff', 'regex', 'memo']);
   for (const r of routes) {
     await page.click(`#nav a[data-route="${r}"]:not(.nav-pinned)`);
     await waitPage(page, r, 5000).catch(() => { throw new Error(`${r} が表示されない`); });
@@ -176,6 +176,57 @@ await t('テキスト：HTML やスクリプトは文字として表示し、危
   assert.equal(r.bold, 0);
   assert.deepEqual(r.links, []);
   assert.match(r.text, /<img src=x/);
+  await ctx.close();
+});
+
+// ---------- 学習テキスト・コマンド辞典 ----------
+await t('学習テキスト：全冊を開けて、図・確認問題・「読んだ」印が動く', async () => {
+  const { page, ctx } = await open('learn');
+  await page.waitForSelector('#learnBody .lr-card');
+  const ids = await page.$$eval('#learnBody .lr-stretch', (a) => a.map((x) => x.getAttribute('href').split('/')[1]));
+  assert.ok(ids.length >= 20, `冊数が少なすぎます: ${ids.length}`);
+  let figures = 0;
+  for (const id of ids) {
+    await page.goto(BASE + '#learn/' + id);
+    await page.waitForSelector('[data-page="learn"] .mn-chapter');
+    figures += (await page.$$('[data-page="learn"] .mn-figure svg')).length;
+  }
+  assert.ok(figures >= 20, `図が少なすぎます: ${figures}`);
+  // 確認問題に答える
+  await page.goto(BASE + '#learn/' + ids[0]);
+  await page.waitForSelector('[data-page="learn"] .mn-quiz');
+  await page.click('[data-page="learn"] .mn-quiz .mn-quiz-c');
+  assert.ok(await page.isVisible('[data-page="learn"] .mn-quiz-res'));
+  // 章を読んだ印 → 一覧に進み具合が出る
+  await page.click('[data-page="learn"] .mn-read');
+  await page.goto(BASE + '#learn');
+  await page.waitForSelector('#learnBody .lr-card');
+  assert.match(await page.textContent('#learnBody .lr-card'), /1 \/ \d+ 章/);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
+
+await t('コマンド辞典：全部の言語を切り替えられ、やりたいことでも引ける', async () => {
+  const { page, ctx } = await open('dict');
+  await page.waitForSelector('#dcTabs button');
+  const n = (await page.$$('#dcTabs button')).length;
+  assert.ok(n >= 5);
+  for (let i = 0; i < n; i++) {
+    await page.click(`#dcTabs button >> nth=${i}`);
+    await page.waitForFunction(() => document.querySelector('#dcDetail').innerText.trim().length > 20);
+  }
+  await page.click('#dcModeTask');
+  await page.fill('#dcSearch', '重複');
+  await page.waitForFunction(() => document.querySelectorAll('#dcList > *').length > 0);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
+
+await t('検索バー：学習テキストも見つかる', async () => {
+  const { page, ctx } = await open();
+  await page.fill('#cmdIn', 'TLS');
+  await page.waitForSelector('#cmdOut .cmd-hit');
+  assert.ok(await page.$$eval('#cmdOut .cmd-hit', (a) => a.some((x) => x.textContent.includes('テキストを読む'))));
   await ctx.close();
 });
 
@@ -323,7 +374,7 @@ await t('PALLAS：タップでメニューが出て、ツアーを最後まで�
 // ---------- スマホ ----------
 await t('スマホ：横にはみ出さず、メニューからページを開ける', async () => {
   const { page, ctx } = await open('', { device: 'iPhone 13' });
-  for (const id of ['home', 'texts', 'diff', 'regex', 'memo']) {
+  for (const id of ['home', 'texts', 'learn', 'dict', 'diff', 'regex', 'memo']) {
     await page.goto(BASE + '#' + id);
     await waitPage(page, id);
     await page.waitForTimeout(150);

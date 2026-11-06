@@ -10,6 +10,8 @@
 | 分類 | ツール | 内容 |
 | --- | --- | --- |
 | 資料 | テキスト | `texts/` に置いた Markdown の資料を目次つきで読む。本文まで検索、コードのコピー、ダウンロード |
+| 資料 | 学習テキスト | ネットワーク・暗号・Web・フォレンジック・サーバーの守り・インフラ運用・プロキシ構築など 21 冊。図・確認問題つき、読んだ章に印が付く（CTF Portal から移行） |
+| 資料 | コマンド辞典 | SQL・Python・Linux・Git・Docker の書式・オプション・例を、コマンドごと / やりたいことで引ける。Git と Docker の全体マップつき（CTF Portal から移行） |
 | ツール | 差分比較 | 文章の行・文字単位、CSV / Excel（xlsx / xls）の**セル単位**、バイナリのバイト単位で比べる。非表示のシート・行・列も知らせる |
 | ツール | 正規表現テスト | マッチ部分の色付け、グループの一覧、置換結果。メールアドレス・電話番号・日付などのよく使うパターンつき |
 | 記録 | メモ | 作業メモや定型文をブラウザ内に保存。タグで絞り込み・検索・JSON の書き出し / 読み込み |
@@ -68,7 +70,7 @@ node tests/run.mjs   # 処理部分のテスト（Markdown・検索・差分・E
 
 npm install --no-save --no-package-lock playwright@1.63.0
 npx playwright install chromium
-node tests/e2e.mjs   # 画面のテスト（ページ移動・検索・テキスト・各ツールの例・メモ・お気に入り・PALLAS・スマホ表示）
+node tests/e2e.mjs   # 画面のテスト（ページ移動・検索・テキスト・学習テキスト・コマンド辞典・各ツールの例・メモ・お気に入り・PALLAS・スマホ表示）
 ```
 
 ## 構成
@@ -80,9 +82,9 @@ scripts/build-sw.mjs  デプロイ時に Service Worker へキャッシュ対象
 css/style.css         スタイル（ダーク / ライト × 3色。CTF Portal と同じデザイン）
 js/app.js             起動とページ切り替え
 js/tools/             ツール（1 ファイル = 1 ツール）と、その一覧 index.js・ひな形 _template.js
-js/ui/                画面の共通の動き（ホーム・メニュー・お気に入り・PALLAS・Markdown の表示など）
+js/ui/                画面の共通の動き（ホーム・メニュー・お気に入り・PALLAS・Markdown の表示・学習テキストの表示と図など）
 js/lib/               画面に依存しない処理（Markdown・検索・差分・表計算ファイルの読み込み）
-js/data/              アイコン・PALLAS のセリフ・バージョン
+js/data/              アイコン・PALLAS のセリフ・バージョン・学習テキストとコマンド辞典の中身
 texts/                テキスト（Markdown）と、その一覧 index.js
 models/ vendor/three/ PALLAS の 3D モデルと three.js（MIT ライセンス）
 tests/                テスト

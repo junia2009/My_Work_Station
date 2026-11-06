@@ -1,6 +1,7 @@
 // ホーム：検索バー（ツールとテキストを横断して探す）/ ツールのタイル / テキストの一覧
 import { TOOLS, TOOL_GROUPS } from '../tools/index.js';
 import { TEXT_LIST, loadBodies } from '../tools/texts.js';
+import { LEARN } from '../tools/learn.js';
 import { searchItems } from '../lib/search.js';
 import { icon } from '../data/icons.js';
 import { $, h, debounce } from './common.js';
@@ -18,6 +19,8 @@ function initCommand() {
   const items = () => [
     ...TOOLS.map((t) => ({ ...t, kind: 'tool', title: t.name, category: t.group, href: `#${t.id}` })),
     ...TEXT_LIST.map((t) => ({ ...t, kind: 'text', icon: t.icon ?? 'texts', href: `#texts/${t.id}`, body: bodies?.get(t.id) ?? '' })),
+    // 学習テキスト：題名・説明・章の見出しで探す
+    ...LEARN.map((t) => ({ id: t.id, kind: 'text', icon: t.icon, title: t.name, desc: t.tagline, category: t.subject, keywords: [...(t.genres ?? []), ...t.chapters.map((c) => c.title)], href: `#learn/${t.id}` })),
   ];
   const open = (it) => (location.hash = it.href);
 

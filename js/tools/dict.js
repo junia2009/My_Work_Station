@@ -1,0 +1,294 @@
+// コマンド辞典：SQL・Python・Linux・Git・Docker などの書き方を、コマンドごと・やりたいことごとに引く
+import { DICTS } from '../data/dict.js';
+import { COMMANDS } from '../data/commands.js';
+import { $, h, store, copy, debounce, KEY } from '../ui/common.js';
+import { gitMap } from '../ui/gitmap.js';
+import { dockerMap } from '../ui/dockermap.js';
+
+export const meta = {
+  id: 'dict',
+  group: '資料',
+  name: 'コマンド辞典',
+  code: 'COMMAND REFERENCE',
+  desc: 'SQL・Python・Linux・Git・Docker の使い方',
+  icon: 'dict',
+  keywords: ['コマンド', '辞典', 'sql', 'python', 'linux', 'git', 'docker', 'grep', 'シェル', '書き方', 'リファレンス'],
+};
+
+export const pallas = 'コマンドの細かいオプションまで覚えている人は少ない。覚えるのは「何ができるか」だけで十分だ。細かい書き方は僕の記憶領域に任せてくれ。';
+
+export const html = `
+  <h1>コマンド辞典</h1>
+  <p class="lead">SQL・Python・Linux コマンド・Git・Docker の使い方を、コマンドごとに引けます（書式・よく使うオプション・例・注意点）。「やりたいことで探す」に切り替えると、目的から書き方を引けます。</p>
+  <div class="dc-bar">
+    <div class="dc-tabs" id="dcTabs" role="tablist"></div>
+    <div class="dc-mode" role="group" aria-label="引き方">
+      <button type="button" id="dcModeCmd" class="active">コマンドで引く</button>
+      <button type="button" id="dcModeTask">やりたいことで探す</button>
+    </div>
+  </div>
+  <details class="card gm-wrap" id="dcGitMap" hidden open>
+    <summary><span class="gm-sum-t">Git 全体マップ</span><span class="gm-sum-s">4 つの場所と、その間を動かすコマンド。チップを押すと説明を開きます</span></summary>
+    <p class="gm-hint">← 図は横にスクロールできます →</p>
+    <div class="gm-scroll" id="dcGitMapBody"></div>
+  </details>
+  <details class="card gm-wrap" id="dcDockerMap" hidden open>
+    <summary><span class="gm-sum-t">Docker 全体マップ</span><span class="gm-sum-s">イメージを中心にした流れと、目的別のコマンド。チップを押すと説明を開きます</span></summary>
+    <p class="gm-hint">← 図は横にスクロールできます →</p>
+    <div class="gm-scroll" id="dcDockerMapBody"></div>
+  </details>
+  <div id="dcCmdView" class="dc-cmd-view">
+    <div class="dc-cats dc-cmd-cats" id="dcCmdCats" role="group" aria-label="セクションで絞り込み"></div>
+    <aside class="card dc-index">
+      <input id="dcCmdSearch" placeholder="コマンド名・説明で絞り込み（grep / JOIN / open / 置換…）" aria-label="コマンドを絞り込み">
+      <select id="dcPick" class="dc-pick" aria-label="コマンドを選ぶ"></select>
+      <div class="dc-index-list" id="dcIndex"></div>
+    </aside>
+    <article class="card dc-detail" id="dcDetail" aria-live="polite"></article>
+  </div>
+  <div id="dcTaskView" hidden>
+    <input id="dcSearch" class="dc-search" placeholder="やりたいことで検索（例：重複 / 上位10件 / 置換 / ポート / csv）" aria-label="やりたいことで検索">
+    <div class="dc-cats" id="dcCats"></div>
+    <p class="hint dc-info" id="dcInfo"></p>
+    <div class="dc-list" id="dcList"></div>
+  </div>
+`;
+
+const FAV_KEY = KEY('dictFav');
+const LANGS = [['sql', 'SQL'], ['python', 'Python'], ['linux', 'Linux コマンド'], ['git', 'Git'], ['docker', 'Docker']];
+const keyOf = (d, x) => `${d.id}:${x.t}`;
+
+// コードの表示：コメント（# / --）を薄く表示する
+function codeView(code, lang, cls = 'dc-code') {
+  const pre = h('pre', { class: cls });
+  for (const [i, line] of code.split('\n').entries()) {
+    if (i) pre.append('\n');
+    const m = lang === 'sql' ? /^(.*?)(--.*)$/.exec(line) : /^((?:[^'"#]|'[^']*'|"[^"]*")*?)(#.*)$/.exec(line);
+    if (m && !(lang !== 'sql' && /^#!/.test(m[2]))) pre.append(m[1], h('span', { class: 'dc-cmt' }, m[2]));
+    else pre.append(line);
+  }
+  return pre;
+}
+const codeBox = (code, lang) => h('div', { class: 'dc-code-wrap' }, codeView(code, lang), h('button', { type: 'button', class: 'ghost small dc-copy', onclick: () => copy(code) }, 'コピー'));
+
+export function init() {
+  let lang = 'sql';
+  let mode = store.get(KEY('dictMode'), 'cmd');
+  const selected = { sql: 'SELECT', python: 'print', linux: 'ls', git: 'git status', docker: 'docker run' };
+  let cat = null, favOnly = false;
+  const cmdCat = { sql: null, python: null, linux: null, git: null, docker: null }; // コマンドで引く：セクションの絞り込み
+  const fav = new Set(store.get(FAV_KEY, []));
+  const saveFav = () => store.set(FAV_KEY, [...fav]);
+
+  // ---------- 上のタブと引き方の切り替え ----------
+  function renderTabs() {
+    $('dcTabs').replaceChildren(...LANGS.map(([id, name]) => h('button', {
+      type: 'button', class: id === lang && !favOnly ? 'active' : '',
+      onclick: () => { lang = id; cat = null; favOnly = false; render(); },
+    }, name, h('small', {}, mode === 'cmd' ? COMMANDS[id].length : DICTS.find((d) => d.id === id).entries.length))),
+    mode === 'task' ? h('button', { type: 'button', class: `dc-fav-tab${favOnly ? ' active' : ''}`, onclick: () => { favOnly = !favOnly; render(); } }, '★ よく使う', h('small', {}, fav.size)) : '');
+    $('dcGitMap').hidden = lang !== 'git' || favOnly;
+    $('dcDockerMap').hidden = lang !== 'docker' || favOnly;
+    $('dcModeCmd').classList.toggle('active', mode === 'cmd');
+    $('dcModeTask').classList.toggle('active', mode === 'task');
+    $('dcCmdView').hidden = mode !== 'cmd';
+    $('dcTaskView').hidden = mode !== 'task';
+  }
+  $('dcModeCmd').addEventListener('click', () => { mode = 'cmd'; store.set(KEY('dictMode'), mode); render(); });
+  $('dcModeTask').addEventListener('click', () => { mode = 'task'; favOnly = false; store.set(KEY('dictMode'), mode); render(); });
+
+  // ---------- コマンドで引く ----------
+  const findCmd = (l, name) => COMMANDS[l].find((x) => x.name === name);
+  function renderIndex() {
+    const q = $('dcCmdSearch').value.trim().toLowerCase();
+    const match = (x) => !q || `${x.name} ${x.sum} ${x.desc} ${x.opts.map((o) => o.join(' ')).join(' ')}`.toLowerCase().includes(q);
+    const cats = [...new Set(COMMANDS[lang].map((x) => x.cat))];
+    if (!cats.includes(cmdCat[lang])) cmdCat[lang] = null;
+    const hits = COMMANDS[lang].filter(match);
+    const list = hits.filter((x) => !cmdCat[lang] || x.cat === cmdCat[lang]);
+    // セクションのチップ（件数は検索語を反映）
+    const setCat = (c) => {
+      cmdCat[lang] = c;
+      renderIndex();
+      // 選んでいたコマンドがセクションの外なら、その先頭を表示する
+      const items = $('dcIndex').querySelectorAll('.dc-index-item');
+      if (items.length && !$('dcIndex').querySelector('.dc-index-item.active')) items[0].click();
+    };
+    $('dcCmdCats').replaceChildren(
+      h('button', { type: 'button', class: `chip${cmdCat[lang] ? '' : ' on'}`, 'aria-pressed': String(!cmdCat[lang]), onclick: () => setCat(null) }, 'すべて', h('small', {}, hits.length)),
+      ...cats.map((c) => {
+        const n = hits.filter((x) => x.cat === c).length;
+        const on = cmdCat[lang] === c;
+        return h('button', { type: 'button', class: `chip${on ? ' on' : ''}${n ? '' : ' zero'}`, 'aria-pressed': String(on), onclick: () => setCat(on ? null : c) }, c, h('small', {}, n));
+      }),
+    );
+    const groups = cats.map((c) => [c, list.filter((x) => x.cat === c)]).filter(([, l]) => l.length);
+    // スマホ用：同じ一覧を標準の選択メニューにも入れる（ページの中に別のスクロール箱を作らない）
+    const pick = $('dcPick');
+    pick.replaceChildren(...(groups.length
+      ? groups.map(([c, l]) => h('optgroup', { label: c }, ...l.map((x) => h('option', { value: x.name }, `${x.name} — ${x.sum}`))))
+      : [h('option', { value: '' }, '見つかりませんでした')]));
+    if (list.some((x) => x.name === selected[lang])) pick.value = selected[lang];
+    else pick.selectedIndex = -1;
+    $('dcIndex').replaceChildren(...(groups.length ? groups.flatMap(([c, l]) => [
+      h('div', { class: 'dc-index-cat' }, c),
+      ...l.map((x) => h('button', { type: 'button', class: `dc-index-item${x.name === selected[lang] ? ' active' : ''}`, onclick: () => { selected[lang] = x.name; renderIndex(); renderDetail(true); } },
+        h('code', {}, x.name), h('span', {}, x.sum))),
+    ]) : [h('p', { class: 'hint' }, cmdCat[lang] && hits.length ? `「${cmdCat[lang]}」には見つかりませんでした` : '見つかりませんでした'),
+      cmdCat[lang] && hits.length ? h('button', { type: 'button', class: 'chip dc-other', onclick: () => setCat(null) }, `すべてのセクションで ${hits.length} 件 →`) : '',
+      // ほかの言語にあれば案内する
+      ...LANGS.filter(([id]) => !hits.length && id !== lang && COMMANDS[id].some(match)).map(([id, name]) => h('button', { type: 'button', class: 'chip dc-other', onclick: () => {
+        lang = id;
+        cmdCat[id] = null;
+        const hit = COMMANDS[id].find(match);
+        selected[id] = hit.name;
+        render();
+      } }, `${name} に ${COMMANDS[id].filter(match).length} 件 →`))]));
+  }
+
+  // そのコマンドを使っている「やりたいこと」の項目（逆引きとのつながり）
+  function relatedTasks(x) {
+    const d = DICTS.find((t) => t.id === lang);
+    const word = (lang === 'git' || lang === 'docker' ? x.name.split(' / ')[0] : x.name.split(/[\s/]/)[0]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = lang === 'python' ? new RegExp(`\\b${word}\\b`) : lang === 'sql' ? new RegExp(`\\b${word}\\b`, 'i') : new RegExp(`(^|[|;&\\s])${word}(\\s|$)`, 'm');
+    return d.entries.filter((t) => re.test(t.code)).slice(0, 6);
+  }
+
+  function renderDetail(scroll = false) {
+    const x = findCmd(lang, selected[lang]) ?? COMMANDS[lang][0];
+    const box = $('dcDetail');
+    const rel = x.rel.map((r) => (findCmd(lang, r)
+      ? h('button', { type: 'button', class: 'chip', onclick: () => { selected[lang] = r; renderIndex(); renderDetail(true); } }, r)
+      : h('span', { class: 'chip dim' }, r)));
+    const tasks = relatedTasks(x);
+    box.replaceChildren(...[
+      h('header', { class: 'dc-d-head' },
+        h('h2', { class: 'dc-d-name' }, x.name),
+        h('span', { class: 'tag' }, x.cat),
+      ),
+      h('p', { class: 'dc-d-sum' }, x.sum),
+      h('div', { class: 'dc-d-sec' }, '書式'),
+      codeBox(x.syn, lang),
+      h('p', { class: 'dc-d-desc' }, x.desc),
+      x.opts.length ? [h('div', { class: 'dc-d-sec' }, lang === 'linux' || lang === 'git' || lang === 'docker' ? 'よく使うオプション' : lang === 'sql' ? '書き方・種類' : '主な使い方'),
+        h('table', { class: 'dc-opts' }, ...x.opts.map(([o, m]) => h('tr', {}, h('th', { title: 'クリックでコピー', onclick: () => copy(o) }, h('code', {}, o)), h('td', {}, m))))] : '',
+      x.ex.length ? [h('div', { class: 'dc-d-sec' }, '例'), ...x.ex.map(([code, d]) => h('div', { class: 'dc-ex' }, codeBox(code, lang), d ? h('p', {}, d) : ''))] : '',
+      x.warn ? h('div', { class: 'mn-callout warn' }, h('span', { class: 'mn-callout-label' }, '注意'), h('p', {}, x.warn)) : '',
+      rel.length ? [h('div', { class: 'dc-d-sec' }, '関連'), h('div', { class: 'dc-rel' }, ...rel)] : '',
+      tasks.length ? [h('div', { class: 'dc-d-sec' }, 'これを使う「やりたいこと」'), h('div', { class: 'dc-rel' }, ...tasks.map((t) => h('button', { type: 'button', class: 'chip', onclick: () => { mode = 'task'; store.set(KEY('dictMode'), mode); $('dcSearch').value = t.t; render(); } }, t.t)))] : '',
+    ].flat().filter(Boolean));
+  }
+  $('dcPick').addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    selected[lang] = e.target.value;
+    renderIndex();
+    renderDetail();
+  });
+  $('dcCmdSearch').addEventListener('input', debounce(() => {
+    renderIndex();
+    // 絞り込みで 1 件になったら、それを表示する
+    const items = $('dcIndex').querySelectorAll('.dc-index-item');
+    if (items.length === 1) items[0].click();
+  }, 150));
+
+  // ---------- やりたいことで探す ----------
+  const card = (d, x, showDict = false) => {
+    const k = keyOf(d, x);
+    const star = h('button', { type: 'button', class: `dc-star${fav.has(k) ? ' on' : ''}`, title: fav.has(k) ? 'よく使うから外す' : 'よく使うに入れる', 'aria-label': 'よく使う' }, fav.has(k) ? '★' : '☆');
+    star.addEventListener('click', () => {
+      if (fav.has(k)) fav.delete(k);
+      else fav.add(k);
+      saveFav();
+      render();
+    });
+    return h('article', { class: 'dc-item' },
+      h('div', { class: 'dc-head' }, h('h3', { class: 'dc-title' }, x.t), showDict ? h('span', { class: 'tag' }, d.name) : '', h('span', { class: 'dc-cat' }, x.cat), star),
+      codeBox(x.code, d.id),
+      h('p', { class: 'dc-desc' }, x.d),
+      x.notes ? h('table', { class: 'dc-notes' }, h('tr', {}, h('th', { colspan: 2 }, 'データベース・環境による違い')), ...x.notes.map(([a, b]) => h('tr', {}, h('td', {}, a), h('td', { class: 'mono', onclick: () => copy(b), title: 'クリックでコピー' }, b)))) : '',
+    );
+  };
+  function renderTasks() {
+    const q = $('dcSearch').value.trim().toLowerCase();
+    const list = $('dcList');
+    if (q) {
+      const words = q.split(/\s+/);
+      const hits = DICTS.flatMap((d) => d.entries.filter((x) => words.every((w) => `${x.t} ${x.code} ${x.d} ${x.kw} ${x.cat} ${d.name}`.toLowerCase().includes(w))).map((x) => [d, x]));
+      $('dcCats').replaceChildren();
+      $('dcInfo').textContent = `「${$('dcSearch').value.trim()}」：${hits.length} 件（すべての言語から）`;
+      list.replaceChildren(...(hits.length ? hits.map(([d, x]) => card(d, x, true)) : [h('p', { class: 'hint' }, '見つかりませんでした。別の言い方（例：「重複」「件数」「置換」）や英語（distinct・grep など）でも探せます。')]));
+      return;
+    }
+    if (favOnly) {
+      const items = DICTS.flatMap((d) => d.entries.filter((x) => fav.has(keyOf(d, x))).map((x) => [d, x]));
+      $('dcCats').replaceChildren();
+      $('dcInfo').textContent = `よく使うに入れた項目：${items.length} 件（☆ を押すと入ります）`;
+      list.replaceChildren(...(items.length ? items.map(([d, x]) => card(d, x, true)) : [h('p', { class: 'hint' }, 'まだありません。各項目の ☆ を押すと、ここにまとまります。')]));
+      return;
+    }
+    const d = DICTS.find((x) => x.id === lang);
+    $('dcCats').replaceChildren(
+      h('button', { type: 'button', class: `chip${cat ? '' : ' on'}`, onclick: () => { cat = null; render(); } }, 'すべて'),
+      ...d.cats.map((c) => h('button', { type: 'button', class: `chip${cat === c ? ' on' : ''}`, onclick: () => { cat = c; render(); } }, c, h('small', {}, d.entries.filter((x) => x.cat === c).length))),
+    );
+    const items = d.entries.filter((x) => !cat || x.cat === cat);
+    $('dcInfo').textContent = `${d.desc}（${items.length} 件）`;
+    const groups = (cat ? [cat] : d.cats).map((c) => [c, items.filter((x) => x.cat === c)]).filter(([, l]) => l.length);
+    list.replaceChildren(...groups.flatMap(([c, l]) => [h('h2', { class: 'dc-group' }, c), ...l.map((x) => card(d, x))]));
+  }
+  $('dcSearch').addEventListener('input', debounce(render, 150));
+  $('dcSearch').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.target.value = '';
+      render();
+    }
+  });
+
+  function render() {
+    renderTabs();
+    if (mode === 'cmd') {
+      renderIndex();
+      renderDetail();
+    } else renderTasks();
+  }
+  // Git の全体マップ（Git のタブの一番上）。チップを押すと「コマンドで引く」でその説明を開く
+  const gm = gitMap((name) => {
+    mode = 'cmd';
+    store.set(KEY('dictMode'), mode);
+    lang = 'git';
+    cmdCat.git = null;
+    $('dcCmdSearch').value = '';
+    selected.git = name;
+    render();
+    $('dcDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, (name) => !!findCmd('git', name));
+  $('dcGitMapBody').append(gm.svg);
+  const mapBox = $('dcGitMap');
+  mapBox.open = store.get(KEY('gitMapOpen'), !window.matchMedia('(max-width: 760px)').matches);
+  mapBox.addEventListener('toggle', () => store.set(KEY('gitMapOpen'), mapBox.open));
+
+  // Docker の全体マップ（Docker のタブの一番上）
+  const dm = dockerMap((name) => {
+    mode = 'cmd';
+    store.set(KEY('dictMode'), mode);
+    lang = 'docker';
+    cmdCat.docker = null;
+    $('dcCmdSearch').value = '';
+    selected.docker = name;
+    render();
+    $('dcDetail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, (name) => !!findCmd('docker', name));
+  $('dcDockerMapBody').append(dm.svg);
+  const dmapBox = $('dcDockerMap');
+  dmapBox.open = store.get(KEY('dockerMapOpen'), !window.matchMedia('(max-width: 760px)').matches);
+  dmapBox.addEventListener('toggle', () => store.set(KEY('dockerMapOpen'), dmapBox.open));
+
+  render();
+  // #dict/sql のように開いたら、その言語を表示する
+  return (arg) => {
+    if (arg && COMMANDS[arg]) {
+      lang = arg;
+      render();
+    }
+  };
+}
