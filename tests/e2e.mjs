@@ -297,14 +297,24 @@ await t('PALLAS：タップでメニューが出て、ツアーを最後まで�
   await page.evaluate(() => document.querySelector('.pb-close')?.click());
   await page.click('.pallas-drone');
   await page.waitForSelector('.pallas-bubble:not([hidden])');
-  await page.click('.pb-actions button:text("ツアーを見る")');
+  // 吹き出しは PALLAS と一緒に動き続けるので、マウスで狙わずにボタンを直接押す（キーボードで押すのと同じ）
+  const press = (sel) => page.$eval(sel, (b) => b.click());
+  await press('.pb-actions button:text("ツアーを見る")');
+  let steps = 0;
   for (let i = 0; i < 10; i++) {
-    const btn = await page.waitForSelector('.pb-actions button.small', { timeout: 8000 });
+    const btn = await page.waitForSelector('.pallas-bubble:not([hidden]) .pb-actions button.small', { timeout: 15000 });
     const label = await btn.textContent();
-    await btn.click();
+    const no = await page.$eval('.pb-text', (t) => (t.dataset.full ?? '').split('　')[0]);
+    await btn.evaluate((b) => b.click());
+    steps++;
     if (label.includes('終わる')) break;
-    await page.waitForTimeout(200);
+    // 次の手順（吹き出しの「2 / 6」などの番号が変わる）まで待つ
+    await page.waitForFunction((n) => {
+      const b = document.querySelector('.pallas-bubble');
+      return !b.hidden && (document.querySelector('.pb-text').dataset.full ?? '').split('　')[0] !== n;
+    }, no, { timeout: 15000 });
   }
+  assert.equal(steps, 6, `ツアーの手順の数が違います: ${steps}`);
   assert.equal(await page.isHidden('.pallas-bubble'), true);
   assert.deepEqual(page.errors, []);
   await ctx.close();
