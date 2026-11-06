@@ -1,91 +1,91 @@
 # My_Work_Station
 
-A workbench portal for keeping the tools and texts (procedure docs, materials) I use at work. It runs on HTML + JavaScript alone, the same mechanism as [My_CTF_portal](https://github.com/junia2009/My_CTF_portal), so it can be published to GitHub Pages as-is.
-Everything you enter is processed inside the browser and is never sent anywhere.
+仕事で使うツールとテキスト（手順書・資料）を置いておく作業台ポータルです。[My_CTF_portal](https://github.com/junia2009/My_CTF_portal) と同じ仕組みで、HTML + JavaScript だけで動くので、GitHub Pages でそのまま公開できます。
+入力した内容はすべてブラウザ内で処理され、外部には送信されません。
 
-## Features
+## 機能
 
-Type into the search bar in the middle of the home screen to search across tool names and **the body text of the texts** (Enter opens the top result).
+ホーム画面の中央の検索バーに言葉を入れると、ツールの名前と**テキストの本文**を横断して探します（Enter でいちばん上の候補を開きます）。
 
-| Group | Tool | Description |
+| 分類 | ツール | 内容 |
 | --- | --- | --- |
-| Materials | Texts | Read Markdown materials placed in `texts/` with a table of contents. Search down to the body text, copy code blocks, download |
-| Tools | Diff | Compare text line by line or character by character, CSV / Excel (xlsx / xls) **cell by cell**, and binaries byte by byte. Also flags hidden sheets, rows, and columns |
-| Tools | Regex tester | Highlight matches, list groups, preview replacements. Presets such as email addresses, phone numbers, and dates |
-| Records | Memo | Save work notes and boilerplate in the browser. Tag filtering, search, JSON export / import |
+| 資料 | テキスト | `texts/` に置いた Markdown の資料を目次つきで読む。本文まで検索、コードのコピー、ダウンロード |
+| ツール | 差分比較 | 文章の行・文字単位、CSV / Excel（xlsx / xls）の**セル単位**、バイナリのバイト単位で比べる。非表示のシート・行・列も知らせる |
+| ツール | 正規表現テスト | マッチ部分の色付け、グループの一覧、置換結果。メールアドレス・電話番号・日付などのよく使うパターンつき |
+| 記録 | メモ | 作業メモや定型文をブラウザ内に保存。タグで絞り込み・検索・JSON の書き出し / 読み込み |
 
-Shared with CTF Portal:
+CTF Portal と共通の機能：
 
-- **Favorites**: register with "☆ Add to favorites" above each tool's heading (on PC they appear in the side menu, on phones under ★)
-- **Usage panel and "▶ Try an example"**: lets you check what each tool does right away
-- **Theme**: dark / light with ☾ / ☀ at the top right, accent color with CYAN / CRIMSON / EMERALD
-- **Guide PALLAS**: a 3D drone flying around the screen. Gives page guidance, a tour, tips, and reactions (lines are in `js/data/pallas.js` and in each tool file's `pallas`)
-- **PWA**: installable, and once opened every tool and text works offline
-- **Keyboard navigation and phone layout**
+- **お気に入り**：各ツールの見出しの上の「☆ お気に入りに追加」で登録（PC はサイドメニュー、スマホは ★ から開く）
+- **使い方パネルと「▶ 例を試す」**：各ツールの動きをすぐに確かめられる
+- **テーマ**：右上の ☾ / ☀ でダーク / ライト、CYAN / CRIMSON / EMERALD でアクセントカラー
+- **案内役 PALLAS**：画面を飛び回る 3D ドローン。ページ案内・ツアー・ヒント・出来事への反応（セリフは `js/data/pallas.js` と各ツールのファイルの `pallas`）
+- **PWA**：インストールでき、一度開けばオフラインでも全ツール・全テキストが使える
+- **キーボード操作・スマホ表示**
 
-## Adding tools and texts
+## ツール・テキストの追加
 
-For details, see the in-portal text "**Adding tools and texts**" (`texts/howto-add.md`).
+詳しくはポータル内のテキスト「**ツール・テキストの追加方法**」（`texts/howto-add.md`）を見てください。
 
-### Text
+### テキスト
 
-1. Put a Markdown file in `texts/`
-2. Add one line to `TEXTS` in `texts/index.js`
+1. `texts/` に Markdown のファイルを置く
+2. `texts/index.js` の `TEXTS` に 1 行足す
 
-### Tool
+### ツール
 
-1. Copy `js/tools/_template.js` to create `js/tools/<name>.js` (one file = one tool; the screen, usage, example, PALLAS lines, and logic all go in this file)
-2. Add one line each to the `import` and `MODULES` in `js/tools/index.js`
+1. `js/tools/_template.js` をコピーして `js/tools/<名前>.js` を作る（1 ファイル = 1 ツール。画面・使い方・例・PALLAS のセリフ・処理を全部このファイルに書く）
+2. `js/tools/index.js` の `import` と `MODULES` に 1 行ずつ足す
 
-The menu, home tiles, favorites, search, and MODULE numbers are all generated automatically from the list.
+メニュー・ホームのタイル・お気に入り・検索・MODULE 番号は、一覧から自動で作られます。
 
-## Publishing on GitHub Pages
+## GitHub Pages での公開
 
-Published automatically by GitHub Actions (`.github/workflows/pages.yml`).
+GitHub Actions（`.github/workflows/pages.yml`）で自動公開します。
 
-1. Open this repository's **Settings → Pages** and set the Source under **Build and deployment** to "**GitHub Actions**" (first time only)
-2. Pushing to the `main` branch automatically runs the tests (logic tests and screen tests) → publish
-   - Pull requests run the same tests too (`.github/workflows/test.yml`, no publishing)
-3. Published at: `https://<username>.github.io/My_Work_Station/`
+1. このリポジトリの **Settings → Pages** を開き、**Build and deployment** の Source を「**GitHub Actions**」にする（最初の1回だけ）
+2. `main` ブランチに push すると、テスト（処理のテストと画面のテスト）→ 公開が自動で実行されます
+   - プルリクエストでも同じテストが走ります（`.github/workflows/test.yml`、公開はしない）
+3. 公開先: `https://<ユーザー名>.github.io/My_Work_Station/`
 
-Nothing is published if the tests fail. Only `index.html` / `manifest.webmanifest` / `sw.js` / `css` / `js` / `icons` / `vendor` (three.js) / `models` / `texts` are published.
+テストが失敗した場合は公開されません。公開されるのは `index.html` / `manifest.webmanifest` / `sw.js` / `css` / `js` / `icons` / `vendor`（three.js）/ `models` / `texts` だけです。
 
-> GitHub Pages is a public site. Don't put confidential company information, passwords, or personal data in texts or tools.
+> GitHub Pages は公開サイトです。社外秘の情報・パスワード・個人情報をテキストやツールに書かないでください。
 
-## Running locally
+## ローカルで動かす
 
-Because it uses ES Modules, open it through a simple server rather than opening `index.html` directly.
+ES Modules を使っているため、`index.html` を直接開くのではなく簡易サーバー経由で開いてください。
 
 ```sh
 python3 -m http.server 8000
-# open http://localhost:8000
+# http://localhost:8000 を開く
 ```
 
-## Tests
+## テスト
 
 ```sh
-node tests/run.mjs   # logic tests (Markdown, search, diff, Excel reading, etc.)
+node tests/run.mjs   # 処理部分のテスト（Markdown・検索・差分・Excel の読み込みなど）
 
 npm install --no-save --no-package-lock playwright@1.63.0
 npx playwright install chromium
-node tests/e2e.mjs   # screen tests (page navigation, search, texts, each tool's examples, memo, favorites, PALLAS, phone layout)
+node tests/e2e.mjs   # 画面のテスト（ページ移動・検索・テキスト・各ツールの例・メモ・お気に入り・PALLAS・スマホ表示）
 ```
 
-## Structure
+## 構成
 
 ```
-index.html            Screen frame (home and favorites only; tool pages are generated from js/tools/)
-manifest.webmanifest / sw.js / icons/   PWA (install and offline support)
-scripts/build-sw.mjs  Embeds the cache targets into the Service Worker at deploy time
-css/style.css         Styles (dark / light × 3 colors; same design as CTF Portal)
-js/app.js             Startup and page switching
-js/tools/             Tools (1 file = 1 tool) and their list index.js, template _template.js
-js/ui/                Shared screen behavior (home, menu, favorites, PALLAS, Markdown display, etc.)
-js/lib/               Logic independent of the screen (Markdown, search, diff, spreadsheet reading)
-js/data/              Icons, PALLAS lines, version
-texts/                Texts (Markdown) and their list index.js
-models/ vendor/three/ PALLAS 3D model and three.js (MIT license)
-tests/                Tests
+index.html            画面の枠（ホームとお気に入りだけ。ツールのページは js/tools/ から自動で作る）
+manifest.webmanifest / sw.js / icons/   PWA（インストール・オフライン対応）
+scripts/build-sw.mjs  デプロイ時に Service Worker へキャッシュ対象を埋め込む
+css/style.css         スタイル（ダーク / ライト × 3色。CTF Portal と同じデザイン）
+js/app.js             起動とページ切り替え
+js/tools/             ツール（1 ファイル = 1 ツール）と、その一覧 index.js・ひな形 _template.js
+js/ui/                画面の共通の動き（ホーム・メニュー・お気に入り・PALLAS・Markdown の表示など）
+js/lib/               画面に依存しない処理（Markdown・検索・差分・表計算ファイルの読み込み）
+js/data/              アイコン・PALLAS のセリフ・バージョン
+texts/                テキスト（Markdown）と、その一覧 index.js
+models/ vendor/three/ PALLAS の 3D モデルと three.js（MIT ライセンス）
+tests/                テスト
 ```
 
-When changing the version, edit `js/data/version.js`.
+バージョンを変えるときは `js/data/version.js` を書き換えてください。
