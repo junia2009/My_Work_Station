@@ -9,6 +9,7 @@ import { searchItems, normalize, snippet } from '../js/lib/search.js';
 import { hexToBytes, bytesToHex, latin1Decode } from '../js/lib/bytes.js';
 import { TEXTS } from '../texts/index.js';
 import * as D from '../js/lib/dates.js';
+import * as MB from '../js/lib/memobody.js';
 
 let passed = 0;
 const t = async (name, fn) => {
@@ -175,6 +176,22 @@ await t('日付：タイムゾーンと UNIX 時間', () => {
   assert.equal(D.fromUnix('1700000000'), 1700000000000);
   assert.equal(D.fromUnix('1700000000123'), 1700000000123);
   assert.equal(D.fromUnix('abc'), null);
+});
+
+// ---------- メモの本文（文字と写真） ----------
+await t('メモの本文：写真の印の取り出し・文字だけ・並び・付け替え・古い形式', () => {
+  const body = 'ラックの写真\n{{photo:ph_a}}\n青が本番 {{photo:ph_b}} です\n{{photo:ph_a}}';
+  assert.deepEqual(MB.photoIds(body), ['ph_a', 'ph_b']);
+  assert.equal(MB.plainText(body), 'ラックの写真\n青が本番  です');
+  assert.equal(MB.plainText('{{photo:x}}\n{{photo:y}}'), '');
+  assert.deepEqual(MB.segments('a{{photo:x}}b'), [{ text: 'a' }, { photo: 'x' }, { text: 'b' }]);
+  assert.deepEqual(MB.segments(''), []);
+  assert.equal(MB.remapPhotos('a{{photo:x}}b{{photo:z}}', new Map([['x', 'y']])), 'a{{photo:y}}b');
+  // 古い形式：写真が本文の外にある → 本文の末尾に並べる
+  assert.deepEqual(MB.normalizeMemo({ body: 'メモ\n', photos: ['p1', 'p2'] }), { body: 'メモ\n{{photo:p1}}\n{{photo:p2}}', photos: ['p1', 'p2'] });
+  assert.deepEqual(MB.normalizeMemo({ body: '', photos: ['p1'] }), { body: '{{photo:p1}}', photos: ['p1'] });
+  assert.deepEqual(MB.normalizeMemo({ body: 'x{{photo:p1}}', photos: ['p1'] }).body, 'x{{photo:p1}}');
+  assert.deepEqual(MB.normalizeMemo({ body: 'x' }), { body: 'x', photos: [] });
 });
 
 // ---------- 登録内容 ----------

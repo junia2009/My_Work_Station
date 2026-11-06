@@ -2287,22 +2287,20 @@ tr.dt-now td, tr.dt-now th { background: rgba(var(--accent-rgb), .1); }
   .memo .head > .row .meta { margin-right: auto; padding-left: 1.5rem; font-size: .7rem; white-space: nowrap; }
 }
 
-/* メモの写真 */
+/* メモの写真（本文の中に置く） */
 .memo-photo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin: .5rem 0 .2rem; }
-.memo-photos { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 .6rem; }
-.memo-photos:empty { display: none; }
-.memo-thumb { position: relative; display: inline-block; }
-.memo-thumb-btn { --c: 0px; display: grid; place-items: center; width: 108px; height: 108px; padding: 0; overflow: hidden; background: var(--field); border: 1px solid var(--line); cursor: zoom-in; }
-.memo-thumb-btn:hover { filter: none; border-color: var(--accent); }
-.memo-thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.memo-thumb-x { --c: 0px; position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; border-radius: 50%; font-size: .9rem; line-height: 1; background: var(--panel-solid); color: var(--text); border: 1px solid var(--line-strong); }
-.memo-thumb-x:hover { color: #ff6b81; border-color: #ff6b81; filter: none; }
+.memo-editor { min-height: 9rem; max-height: 70vh; overflow-y: auto; padding: .6rem .75rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere;
+  background: var(--field); border: 1px solid var(--line); border-bottom: 1px solid var(--line-strong); color: var(--text); outline: none; cursor: text; }
+.memo-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(var(--accent-rgb), .35), var(--glow-soft, 0 0 0 transparent); }
+.memo-editor.empty::before { content: attr(data-placeholder); color: var(--muted); opacity: .7; pointer-events: none; }
+.memo-ed-img { display: block; max-width: min(100%, 420px); max-height: 280px; margin: .35rem 0; border: 1px solid var(--line); cursor: default; }
+.memo-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; margin-top: .5rem; color: var(--muted); }
+.memo-text { white-space: pre-wrap; }
+.memo-inline { --c: 0px; display: block; max-width: min(100%, 560px); padding: 0; margin: .4rem 0; background: var(--field); border: 1px solid var(--line); cursor: zoom-in; }
+.memo-inline:hover { filter: none; border-color: var(--accent); }
+.memo-inline img { display: block; max-width: 100%; height: auto; max-height: 420px; object-fit: contain; }
 .memo-count { flex-shrink: 0; font-family: var(--mono); font-size: .72rem; color: var(--muted); border: 1px solid var(--line); padding: 0 .4rem; }
-.memo-body pre { margin-bottom: .2rem; }
 #memoForm.over, .card.over { border-color: var(--accent); box-shadow: inset 0 0 24px rgba(var(--accent-rgb), .15); }
 .memo-viewer { max-width: min(96vw, 1100px); max-height: 94vh; padding: .8rem; background: var(--panel-solid); color: var(--text); border: 1px solid var(--line-strong); }
 .memo-viewer::backdrop { background: rgba(0, 0, 0, .75); }
 .memo-viewer img { display: block; max-width: 100%; max-height: calc(94vh - 5rem); margin: 0 auto .6rem; object-fit: contain; }
-@media (max-width: 760px) {
-  .memo-thumb-btn { width: 84px; height: 84px; }
-}

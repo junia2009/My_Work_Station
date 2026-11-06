@@ -329,19 +329,19 @@ await t('メモ：追加・再読み込み後も残る・絞り込み・編集�
   // ふだんはタイトルだけ。押すと本文が開き、もう一度押すと閉じる
   // （直前の検索で本文に当たったメモは開いているので、いったん全部閉じる）
   await page.click('#memoCloseAll');
-  assert.equal((await page.$$('#memoList .note pre')).length, 0);
+  assert.equal((await page.$$('#memoList .memo-body')).length, 0);
   await page.click('#memoList .note:nth-child(1) .memo-toggle');
-  assert.match(await page.textContent('#memoList .note:nth-child(1) pre'), /タグを打つ/);
+  assert.match(await page.textContent('#memoList .note:nth-child(1) .memo-body'), /タグを打つ/);
   assert.equal(await page.getAttribute('#memoList .note:nth-child(1) .memo-toggle', 'aria-expanded'), 'true');
   await page.click('#memoList .note:nth-child(1) .memo-toggle');
-  assert.equal((await page.$$('#memoList .note pre')).length, 0);
+  assert.equal((await page.$$('#memoList .memo-body')).length, 0);
   await page.click('#memoOpenAll');
-  assert.equal((await page.$$('#memoList .note pre')).length, 2);
+  assert.equal((await page.$$('#memoList .memo-body')).length, 2);
   await page.click('#memoCloseAll');
-  assert.equal((await page.$$('#memoList .note pre')).length, 0);
+  assert.equal((await page.$$('#memoList .memo-body')).length, 0);
   // 本文にだけ当たる言葉で探すと、そのメモは開いた状態で出る
   await page.fill('#memoSearch', 'お世話');
-  await page.waitForFunction(() => document.querySelectorAll('#memoList .note pre').length === 1);
+  await page.waitForFunction(() => document.querySelectorAll('#memoList .memo-body').length === 1);
   await page.fill('#memoSearch', '');
   await page.waitForFunction(() => document.querySelectorAll('#memoList .note').length === 2);
   await page.click('#memoCloseAll');
@@ -361,15 +361,18 @@ await t('メモ：追加・再読み込み後も残る・絞り込み・編集�
   await ctx.close();
 });
 
-await t('メモの写真：追加・貼り付け・表示・再読み込み後も残る・書き出しと読み込み・削除', async () => {
+await t('メモの写真：本文の好きな位置に入れる（追加・貼り付け）・表示・再読み込み・書き出しと読み込み・削除', async () => {
   const { page, ctx } = await open('memo');
   const photoCount = () => page.evaluate(() => new Promise((ok) => {
     const r = indexedDB.open('workstation');
     r.onsuccess = () => { const q = r.result.transaction('photos').objectStore('photos').count(); q.onsuccess = () => ok(q.result); };
   }));
-  // ファイルを選んで追加
+  // 文字を書いてから、その後ろに写真を入れる
+  await page.click('#memoBody');
+  await page.keyboard.type('ラックの写真');
   await page.setInputFiles('#memoPhotoIn', join(ROOT, 'icons/icon-512.png'));
-  await page.waitForSelector('#memoDraftPhotos .memo-thumb img');
+  await page.waitForSelector('#memoBody img[data-photo]');
+  await page.keyboard.type('青が本番');
   // 貼り付け（スクリーンショットを Ctrl+V したとき）
   await page.evaluate(async () => {
     const c = Object.assign(document.createElement('canvas'), { width: 300, height: 200 });
@@ -379,26 +382,49 @@ await t('メモの写真：追加・貼り付け・表示・再読み込み後�
     dt.items.add(new File([blob], 'shot.png', { type: 'image/png' }));
     document.getElementById('memoBody').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
   });
-  await page.waitForFunction(() => document.querySelectorAll('#memoDraftPhotos .memo-thumb img').length === 2);
-  // 1 枚外してから保存
-  await page.click('#memoDraftPhotos .memo-thumb:nth-child(2) .memo-thumb-x');
-  await page.fill('#memoTitle', '画面のスクショ');
+  await page.waitForFunction(() => document.querySelectorAll('#memoBody img[data-photo]').length === 2);
+  await page.keyboard.type('黄が検証');
+  // 文字の貼り付けは、書式を落として文字だけ入る
+  await page.evaluate(() => {
+    const dt = new DataTransfer();
+    dt.setData('text/html', '<b style="color:red">太字</b>');
+    dt.setData('text/plain', '（追記）');
+    document.getElementById('memoBody').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  assert.equal(await page.$$eval('#memoBody b', (a) => a.length), 0);
+  await page.fill('#memoTitle', 'サーバー室の配線');
   await page.click('#memoForm button[type="submit"]');
   await page.waitForSelector('#memoList .memo-count');
-  assert.match(await page.textContent('#memoList .memo-count'), /写真 1/);
-  assert.equal((await page.$$('#memoDraftPhotos .memo-thumb')).length, 0);
-  // 写真だけのメモも開ける。押すと大きく見られる
+  assert.match(await page.textContent('#memoList .memo-count'), /写真 2/);
+  // 保存された形：文字と写真の印が書いた順に並ぶ
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('workstation.memos'))[0].body);
+  assert.match(saved, /^ラックの写真\n\{\{photo:ph_[\w-]+\}\}\n青が本番\n\{\{photo:ph_[\w-]+\}\}\n黄が検証（追記）$/);
+  // 開くと、本文の中の同じ位置に写真が出る。押すと大きく見られる
   await page.click('#memoList .memo-toggle');
-  await page.waitForSelector('#memoList .memo-body .memo-thumb img');
-  await page.click('#memoList .memo-body .memo-thumb-btn');
+  await page.waitForFunction(() => document.querySelectorAll('#memoList .memo-body .memo-inline img').length === 2);
+  const order = await page.$$eval('#memoList .memo-body > *', (a) => a.map((x) => (x.classList.contains('memo-inline') ? 'IMG' : x.textContent.trim())).filter(Boolean));
+  assert.deepEqual(order, ['ラックの写真', 'IMG', '青が本番', 'IMG', '黄が検証（追記）']);
+  await page.click('#memoList .memo-inline');
   await page.waitForFunction(() => document.getElementById('memoViewer').open && document.getElementById('memoViewerImg').naturalWidth === 512);
-  assert.match(await page.textContent('#memoViewerInfo'), /512×512/);
   await page.click('#memoViewerClose');
+  // 本文をコピーは文字だけ
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.click('#memoList .note button:text("本文をコピー")');
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'ラックの写真\n青が本番\n黄が検証（追記）');
+  // 編集すると、写真も本文の中に戻ってくる。1 枚消して保存
+  await page.click('#memoList .note button:text("編集")');
+  await page.waitForFunction(() => document.querySelectorAll('#memoBody img[data-photo]').length === 2);
+  await page.evaluate(() => document.querySelectorAll('#memoBody img[data-photo]')[1].remove());
+  await page.click('#memoForm button[type="submit"]');
+  await page.waitForFunction(() => /写真 1/.test(document.querySelector('#memoList .memo-count')?.textContent));
+  // 消した写真は保存場所からも消える
+  for (let i = 0; i < 20 && (await photoCount()) !== 1; i++) await page.waitForTimeout(100);
+  assert.equal(await photoCount(), 1);
   // 再読み込み後も残る
   await page.reload();
   await waitPage(page, 'memo');
   await page.click('#memoList .memo-toggle');
-  await page.waitForSelector('#memoList .memo-body .memo-thumb img');
+  await page.waitForSelector('#memoList .memo-body .memo-inline img');
   // 書き出し（写真は JSON の中に入る）→ 削除 → 読み込みで元に戻る
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#memoExport')]);
   const file = await dl.path();
@@ -407,12 +433,33 @@ await t('メモの写真：追加・貼り付け・表示・再読み込み後�
   page.once('dialog', (d) => d.accept());
   await page.click('#memoList .note button:text("削除")');
   await page.waitForFunction(() => !document.querySelector('#memoList .note'));
-  await page.waitForTimeout(200);
-  assert.equal(await photoCount(), 1); // 外した 1 枚は片付けの対象（作ったばかりなので、まだ残る）
+  await page.waitForFunction(() => new Promise((ok) => {
+    const r = indexedDB.open('workstation');
+    r.onsuccess = () => { const q = r.result.transaction('photos').objectStore('photos').count(); q.onsuccess = () => ok(q.result === 0); };
+  }));
   await page.setInputFiles('#memoImport', file);
   await page.waitForSelector('#memoList .memo-count');
   await page.click('#memoList .memo-toggle');
-  await page.waitForSelector('#memoList .memo-body .memo-thumb img');
+  await page.waitForSelector('#memoList .memo-body .memo-inline img');
+  assert.match(await page.textContent('#memoList .memo-body'), /ラックの写真[\s\S]*青が本番/);
+  assert.deepEqual(page.errors, []);
+  await ctx.close();
+});
+
+await t('メモの写真：前の形式（写真を本文の外に持つメモ）は本文の末尾に並べて表示する', async () => {
+  const { page, ctx } = await open('memo');
+  await page.evaluate(async () => {
+    const { putPhoto } = await import('./js/lib/photostore.js');
+    const c = Object.assign(document.createElement('canvas'), { width: 40, height: 30 });
+    const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+    const id = await putPhoto({ blob, w: 40, h: 30, name: 'old.png' });
+    localStorage.setItem('workstation.memos', JSON.stringify([{ id: 'm1', title: '前の形式', tag: '', body: '本文', photos: [id], updated: '2026-11-06T00:00:00Z' }]));
+  });
+  await page.reload();
+  await waitPage(page, 'memo');
+  await page.click('#memoList .memo-toggle');
+  await page.waitForSelector('#memoList .memo-body .memo-inline img');
+  assert.match(await page.textContent('#memoList .memo-count'), /写真 1/);
   assert.deepEqual(page.errors, []);
   await ctx.close();
 });
