@@ -108,6 +108,14 @@ await t('テキスト：一覧のファイルがそろっていて、id が重�
   }
 });
 
+// ---------- PWA ----------
+await t('PWA：アプリの id が CTF Portal（同じドメイン）と重ならない', () => {
+  const m = JSON.parse(readFileSync(new URL('../manifest.webmanifest', import.meta.url), 'utf8'));
+  // id はドメインの直下から読まれるので、"./" だと同じドメインの別アプリと同じ id になってしまう
+  const id = new URL(m.id, new URL(m.start_url, 'https://junia2009.github.io/My_Work_Station/').origin).href;
+  assert.equal(id, 'https://junia2009.github.io/My_Work_Station/');
+});
+
 // ---------- 差分 ----------
 await t('差分', () => {
   const d = diffLines('a\nb\nc\nd', 'a\nB\nc\nd\ne');

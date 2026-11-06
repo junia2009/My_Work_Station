@@ -5,7 +5,7 @@
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
-  "id": "./",
+  "id": "/My_Work_Station/",
   "display": "standalone",
   "display_override": [
     "window-controls-overlay",
